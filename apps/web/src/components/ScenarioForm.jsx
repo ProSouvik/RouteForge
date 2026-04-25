@@ -1,6 +1,6 @@
 function formatDisruptionTitle(disruption) {
-  const category = disruption.category?.replace(/_/g, " ") || "Unknown";
-  const severity = disruption.severity ? disruption.severity.toUpperCase() : "UNKNOWN";
+  const category = disruption.category?.replace(/_/g, " ") || disruption.type?.replace(/_/g, " ") || "Unknown";
+  const severity = disruption.severity != null ? String(disruption.severity).toUpperCase() : "UNKNOWN";
   return `${category} · ${severity}`;
 }
 
@@ -129,26 +129,31 @@ export default function ScenarioForm({
             Select one or more disruptions to consider for alternate route calculation.
           </div>
           <div className="disruption-list">
-            {liveDisruptions.map((incident) => (
-              <button
-                type="button"
-                key={incident.id}
-                className={`disruption-card ${selectedLiveDisruptions && selectedLiveDisruptions.some(d => d.id === incident.id) ? "selected" : ""}`}
-                onClick={() => onSelectLiveDisruption(incident)}
-                data-testid={`select-live-disruption-${incident.id}`}
-              >
-                <div className="disruption-title">{formatDisruptionTitle(incident)}</div>
-                <div className="disruption-description">{incident.description}</div>
-                <div className="disruption-meta">
-                  <span>{incident.provider}</span>
-                  {incident.location?.lat != null && incident.location?.lon != null ? (
-                    <span>
-                      {incident.location.lat.toFixed(4)}, {incident.location.lon.toFixed(4)}
-                    </span>
-                  ) : null}
-                </div>
-              </button>
-            ))}
+            {liveDisruptions.map((incident) => {
+              const location = incident.location || (incident.lat != null && incident.lon != null ? { lat: incident.lat, lon: incident.lon } : null);
+              const incidentId = incident.id || `${incident.type || "incident"}-${location?.lat ?? "na"}-${location?.lon ?? "na"}`;
+
+              return (
+                <button
+                  type="button"
+                  key={incidentId}
+                  className={`disruption-card ${selectedLiveDisruptions && selectedLiveDisruptions.some(d => d.id === incidentId) ? "selected" : ""}`}
+                  onClick={() => onSelectLiveDisruption({ ...incident, id: incidentId, location })}
+                  data-testid={`select-live-disruption-${incidentId}`}
+                >
+                  <div className="disruption-title">{formatDisruptionTitle(incident)}</div>
+                  <div className="disruption-description">{incident.description}</div>
+                  <div className="disruption-meta">
+                    <span>{incident.provider}</span>
+                    {location ? (
+                      <span>
+                        {location.lat.toFixed(4)}, {location.lon.toFixed(4)}
+                      </span>
+                    ) : null}
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
       ) : (

@@ -1,3 +1,4 @@
+import "dotenv/config";
 import cors from "cors";
 import express from "express";
 import chatRouter from "./routes/chat.js";
@@ -18,7 +19,6 @@ function parseOrigins() {
 
 async function checkRoutingHealth() {
   const osrmBase = (process.env.OSRM_BASE_URL || "https://router.project-osrm.org").replace(/\/$/, "");
-
 
   const testUrl = `${osrmBase}/route/v1/driving/13.388860,52.517037;13.397634,52.529407?overview=false`;
   try {
@@ -71,13 +71,11 @@ if (!isRunningInJest) {
   const port = Number(process.env.PORT || 8080);
 
   const server = app.listen(port, () => {
-
     console.log(`API listening on http://localhost:${port}`);
   });
 
   server.on("error", (error) => {
     if (error.code === "EADDRINUSE") {
-
       console.error(
         `Port ${port} is already in use. Stop the existing process or start the API on a different port with PORT=XXXX.`
       );

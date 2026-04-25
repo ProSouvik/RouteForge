@@ -5,7 +5,7 @@ import { ApiError } from "../middleware/error.js";
 import { computeRoute } from "../services/googleRoutes.js";
 import { createScenario, getScenarioById, updateScenario } from "../services/firestore.js";
 import { generateReasoning } from "../services/gemini.js";
-import { fetchLiveIncidentsForRoute } from "../services/trafficIncidents.js";
+import { collectAllDisruptions } from "../services/disruptionCollectors.js";
 import {
   DISRUPTION_DURATION_MULTIPLIER,
   DISRUPTION_MIN_OFFSET_KM,
@@ -94,7 +94,7 @@ router.post("/compute", async (req, res, next) => {
       destination: body.destination,
     });
 
-    const liveDisruptions = await fetchLiveIncidentsForRoute(route);
+    const liveDisruptions = await collectAllDisruptions(route.geometry.coordinates);
 
     const scenarioId = uuidv4();
     const label = await buildLabel(body.source, body.destination, body.label);

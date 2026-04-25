@@ -1,3 +1,4 @@
+import { v4 as uuidv4 } from "uuid";
 import * as turf from "@turf/turf";
 
 
@@ -19,6 +20,43 @@ function normalizeSeverity(raw) {
     moderate: 5, medium: 5, minor: 3, low: 2, minimal: 1, unknown: 3,
   };
   return map[String(raw || "").toLowerCase().trim()] || 3;
+}
+
+function normalizeSeverityLabel(raw) {
+  if (typeof raw === "string") {
+    return raw.trim().toUpperCase() || "UNKNOWN";
+  }
+  if (typeof raw === "number") {
+    if (raw >= 8) return "HIGH";
+    if (raw >= 5) return "MEDIUM";
+    if (raw >= 3) return "LOW";
+    return "MINOR";
+  }
+  return "UNKNOWN";
+}
+
+function normalizeIncidentForApi(incident) {
+  const type = incident.type
+    ? String(incident.type).toUpperCase().replace(/\s+/g, "_")
+    : "UNKNOWN";
+  const category = incident.category
+    ? String(incident.category).toLowerCase().replace(/\s+/g, "_")
+    : type.toLowerCase();
+  const provider = String(incident.source || incident.provider || "unknown");
+  const location = {
+    lat: Number(incident.lat ?? incident.location?.lat),
+    lon: Number(incident.lon ?? incident.location?.lon),
+  };
+
+  return {
+    id: incident.id || uuidv4(),
+    category,
+    type,
+    description: String(incident.description || "Unknown disruption"),
+    severity: normalizeSeverityLabel(incident.severity),
+    location,
+    provider,
+  };
 }
 
 
@@ -398,7 +436,7 @@ export async function collectAllDisruptions(routeCoords) {
     return String(a.source).localeCompare(String(b.source));
   });
 
-  return deduplicated;
+  return deduplicated.map(normalizeIncidentForApi);
 }
 
 
