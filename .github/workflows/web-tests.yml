@@ -2,13 +2,13 @@ name: Web Tests
 
 on:
   push:
-    branches: [main]
+    branches: [master]
     paths:
       - 'apps/web/**'
       - 'package*.json'
       - 'yarn.lock'
   pull_request:
-    branches: [main]
+    branches: [master]
     paths:
       - 'apps/web/**'
       - 'package*.json'

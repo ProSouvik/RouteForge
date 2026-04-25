@@ -2,13 +2,13 @@ name: API Tests
 
 on:
   push:
-    branches: [main]
+    branches: [master]
     paths:
       - 'apps/api/**'
       - 'package*.json'
       - 'yarn.lock'
   pull_request:
-    branches: [main]
+    branches: [master]
     paths:
       - 'apps/api/**'
       - 'package*.json'
