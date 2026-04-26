@@ -65,9 +65,13 @@ export function createApp() {
 }
 
 const isRunningInJest = process.env.JEST_WORKER_ID !== undefined;
+const isRunningInVercel = process.env.VERCEL === "1" || process.env.VERCEL === "true";
 
-if (!isRunningInJest) {
-  const app = createApp();
+const app = createApp();
+
+export default app;
+
+if (!isRunningInJest && !isRunningInVercel) {
   const port = Number(process.env.PORT || 8080);
 
   const server = app.listen(port, () => {
