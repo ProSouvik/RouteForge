@@ -98,13 +98,18 @@ export default function MetricsPanel({
     : null;
 
   return (
+    
     <section className="metrics-panel" data-testid="metrics-panel">
+      
       <div className="section-header">
         <div className="section-icon">
           <span className="lucide" data-lucide="bar-chart-3" style={{ width: 16, height: 16 }} />
         </div>
         <span className="section-title">Metrics</span>
+      
+        
       </div>
+      
 
       <MetricCard
         title="Distance"

@@ -5,7 +5,7 @@ export default function ReasoningCard({ reasoning, onRefresh, canRefresh, isRefr
         <div className="section-icon amber">
           <span className="lucide" data-lucide="lightbulb" style={{ width: 16, height: 16 }} />
         </div>
-        <span className="section-title">AI Reasoning</span>
+        <span className="section-title breathing-text">AI Reasoning</span>
         <button
           type="button"
           className="btn btn-subtle btn-sm"

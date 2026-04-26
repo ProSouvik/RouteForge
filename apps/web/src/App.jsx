@@ -1,4 +1,4 @@
-import { useEffect, useState } from "preact/hooks";
+import { useEffect, useState, useRef } from "preact/hooks";
 import ChatBox from "./components/ChatBox.jsx";
 import Map from "./components/Map.jsx";
 import MetricsPanel from "./components/MetricsPanel.jsx";
@@ -49,11 +49,16 @@ export default function App() {
   const [sourceInput, setSourceInput] = useState({
     lat: "",
     lon: "",
+    placeName: "",
   });
   const [destinationInput, setDestinationInput] = useState({
     lat: "",
     lon: "",
+    placeName: "",
   });
+  const [isListeningSource, setIsListeningSource] = useState(false);
+  const [isListeningDestination, setIsListeningDestination] = useState(false);
+  const voiceRecognitionRef = useRef(null);
   const [routeLabel, setRouteLabel] = useState("Custom route");
   const [mapSelectionMode, setMapSelectionMode] = useState(null);
   const [scenarioId, setScenarioId] = useState(null);
@@ -75,6 +80,17 @@ export default function App() {
   const [isRefreshingReasoning, setIsRefreshingReasoning] = useState(false);
   const [isChatLoading, setIsChatLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [severityFilter, setSeverityFilter] = useState({low: true, medium: true, high: true});
+
+  useEffect(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      voiceRecognitionRef.current = new SpeechRecognition();
+      voiceRecognitionRef.current.continuous = false;
+      voiceRecognitionRef.current.interimResults = true;
+      voiceRecognitionRef.current.lang = 'en-US';
+    }
+  }, []);
 
   async function refreshScenarios() {
     const payload = await fetchScenarios();
@@ -114,6 +130,52 @@ export default function App() {
 
     setDestinationInput((current) => ({ ...current, [key]: value }));
     setRouteLabel("Custom route");
+  }
+
+  function handleVoiceInput(scope) {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setErrorMessage("Voice input is not supported in your browser");
+      return;
+    }
+
+    if (scope === "source") {
+      setIsListeningSource(true);
+    } else {
+      setIsListeningDestination(true);
+    }
+
+    const recognition = voiceRecognitionRef.current || new SpeechRecognition();
+    recognition.onresult = (event) => {
+      let transcript = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        transcript += event.results[i][0].transcript;
+      }
+      transcript = transcript.trim();
+      
+      if (transcript) {
+        if (scope === "source") {
+          setSourceInput((current) => ({ ...current, placeName: transcript }));
+        } else {
+          setDestinationInput((current) => ({ ...current, placeName: transcript }));
+        }
+        setRouteLabel("Custom route");
+      }
+    };
+
+    recognition.onerror = (event) => {
+      setErrorMessage(`Voice input error: ${event.error}`);
+    };
+
+    recognition.onend = () => {
+      if (scope === "source") {
+        setIsListeningSource(false);
+      } else {
+        setIsListeningDestination(false);
+      }
+    };
+
+    recognition.start();
   }
 
   function handleMapClick(point) {
@@ -342,7 +404,7 @@ export default function App() {
           <span className={`status-dot ${scenarioId ? "" : "offline"}`} />
           {scenarioId ? "Scenario active" : "No scenario"}
           <span style={{ color: "var(--border-default)" }}>|</span>
-          OSRM · Driving
+          DarthVaders
         </div>
       </header>
 
@@ -364,6 +426,11 @@ export default function App() {
             onSelectLiveDisruption={handleSelectLiveDisruption}
             savedScenarios={savedScenarios}
             onLoadScenario={handleLoadScenario}
+            severityFilter={severityFilter}
+            onSeverityFilterChange={setSeverityFilter}
+            onVoiceInput={handleVoiceInput}
+            isListeningSource={isListeningSource}
+            isListeningDestination={isListeningDestination}
           />
         </section>
 

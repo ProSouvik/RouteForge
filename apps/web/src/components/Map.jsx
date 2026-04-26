@@ -18,10 +18,14 @@ function createPinIcon(label, className, testId) {
   });
 }
 
-function createDisruptionIcon() {
+function createDisruptionIcon(disruption) {
   return L.divIcon({
     className: "",
-    html: '<div class="map-disruption" data-testid="disruption-marker">!</div>',
+    html: `
+      <div class="map-disruption" data-cause="${disruption?.description || 'Unknown cause'}" data-testid="disruption-marker">
+        !
+      </div>
+    `,
     iconSize: [38, 38],
     iconAnchor: [19, 19],
   });
@@ -37,6 +41,7 @@ export default function Map({
   laneLabel,
   selectionMode,
   onMapClick,
+  zoomToLocation,
 }) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
@@ -65,7 +70,7 @@ export default function Map({
 
     L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
       maxZoom: 19,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+     
       crossOrigin: true,
       subdomains: "abcd",
     }).addTo(map);
