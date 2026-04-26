@@ -57,17 +57,18 @@ echo -e "${GREEN}✓${NC} Dependencies installed"
 echo ""
 if [ -f "apps/api/.env" ]; then
     echo -e "${GREEN}✓${NC} apps/api/.env found"
-    # Count configured keys
-    KEY_COUNT=$(grep -c "=" apps/api/.env | tr -d ' ' || echo "0")
+    KEY_COUNT=$(grep -c "^[A-Z_]*=" apps/api/.env 2>/dev/null || echo "0")
     echo -e "   ${BLUE}ℹ${NC}  Found ${KEY_COUNT} environment variables"
 else
     echo -e "${YELLOW}⚠️  apps/api/.env NOT FOUND${NC}"
     echo ""
-    echo -e "   ${YELLOW}The app will run with mock/synthetic data only.${NC}"
-    echo -e "   ${YELLOW}To get real disruption data, place your .env file at:${NC}"
-    echo -e "   ${YELLOW}   apps/api/.env${NC}"
+    echo -e "   ${YELLOW}Without API keys, disruption data may be empty.${NC}"
+    echo -e "   ${YELLOW}Routing may also fail if no routing APIs are configured.${NC}"
     echo ""
-    echo -e "   ${BLUE}Example .env contents:${NC}"
+    echo -e "   ${BLUE}To enable full functionality, create:${NC}"
+    echo -e "   ${BLUE}   apps/api/.env${NC}"
+    echo ""
+    echo -e "   ${BLUE}Example (.env.example):${NC}"
     echo -e "   OPENWEATHER_API_KEY=your_key"
     echo -e "   GOOGLE_MAPS_API_KEY=your_key"
     echo ""
@@ -85,4 +86,3 @@ if [ "$PKG_MGR" = "yarn" ]; then
 else
     npx concurrently "npm run dev --workspace=@routeforge/api" "npm run dev --workspace=@routeforge/web"
 fi
-

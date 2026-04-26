@@ -6,7 +6,7 @@ import reasoningRouter from "./routes/reasoning.js";
 import routesRouter from "./routes/routes.js";
 import scenariosRouter from "./routes/scenarios.js";
 import { errorHandler, notFoundHandler } from "./middleware/error.js";
-import { storageMode } from "./services/firestore.js";
+import { storageMode } from "./services/db/firestore.js";
 
 function parseOrigins() {
   const raw = process.env.CORS_ORIGINS || "http://localhost:5173,http://localhost:5174,http://localhost:5175";

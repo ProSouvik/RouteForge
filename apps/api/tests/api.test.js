@@ -20,7 +20,7 @@ const nearRouteIncidentLocation = { lat: 33.2373, lon: -77.0989 };
 beforeAll(async () => {
   const [{ createApp }, firestore] = await Promise.all([
     import("../src/index.js"),
-    import("../src/services/firestore.js"),
+    import("../src/services/db/firestore.js"),
   ]);
   app = createApp();
   resetInMemoryStore = firestore.__resetInMemoryStore;

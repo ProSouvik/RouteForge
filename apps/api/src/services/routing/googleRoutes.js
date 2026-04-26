@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from "uuid";
-import { haversineKm } from "../utils/geo.js";
+import { haversineKm } from "../../utils/geo.js";
 
 const ROUTE_CACHE_TTL_MS = 5 * 60 * 1000;
 const ROUTE_CACHE_MAX_SIZE = 100;
@@ -327,3 +327,4 @@ export async function computeRoute({ source, destination, intermediates = [] }) 
   setCachedRoute(cacheKey, normalized);
   return normalized;
 }
+

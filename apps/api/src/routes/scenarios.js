@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { ApiError } from "../middleware/error.js";
-import { getScenarioById, listScenarios } from "../services/firestore.js";
+import { getScenarioById, listScenarios } from "../services/db/firestore.js";
 
 const router = Router();
 

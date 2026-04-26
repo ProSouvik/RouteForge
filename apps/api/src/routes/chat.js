@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { z } from "zod";
 import { ApiError } from "../middleware/error.js";
-import { getScenarioById } from "../services/firestore.js";
-import { generateChatReply } from "../services/gemini.js";
+import { getScenarioById } from "../services/db/firestore.js";
+import { generateChatReply } from "../services/ai/gemini.js";
 
 const router = Router();
 

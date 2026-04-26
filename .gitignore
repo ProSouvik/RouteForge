@@ -1,10 +1,77 @@
+# =========================
+# Node / Dependencies
+# =========================
 node_modules/
 apps/*/node_modules/
+
+# =========================
+# Build Outputs
+# =========================
+dist/
+build/
 apps/web/dist/
+
+# =========================
+# Vite / Frontend Cache
+# =========================
+.vite/
+.vite-temp/
+
+# =========================
+# Test Outputs
+# =========================
 coverage/
+test-results/
 playwright-report/
-apps/web/test-results/
+
+# =========================
+# Logs
+# =========================
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# =========================
+# Environment Variables (CRITICAL)
+# =========================
 .env
 .env.*
-*.log
+apps/api/.env
+
+# Allow example env files
+!.env.example
+!apps/api/.env.example
+
+# =========================
+# OS / Editor Files
+# =========================
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# =========================
+# Misc
+# =========================
+*.local
+.cache/
+
+# =========================
+# Temporary / Junk
+# =========================
+tmp/
+temp/
+
+# =========================
+# Optional: Ignore local DB files
+# =========================
+*.sqlite
+*.db
+
+# =========================
+# GitHub / CI artifacts (optional)
+# =========================
+*.zip
+*.tar.gz
 apps/api/.scenarios.json

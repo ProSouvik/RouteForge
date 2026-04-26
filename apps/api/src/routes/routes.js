@@ -3,14 +3,14 @@ import * as turf from "@turf/turf";
 import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
 import { ApiError } from "../middleware/error.js";
-import { computeRoute } from "../services/googleRoutes.js";
-import { createScenario, getScenarioById, updateScenario } from "../services/firestore.js";
-import { generateReasoning } from "../services/gemini.js";
+import { computeRoute } from "../services/routing/googleRoutes.js";
+import { createScenario, getScenarioById, updateScenario } from "../services/db/firestore.js";
+import { generateReasoning } from "../services/ai/gemini.js";
 import {
   ROUTE_DISRUPTION_THRESHOLD_KM,
   collectAllDisruptions,
   getRouteImpactThresholdKm,
-} from "../services/disruptionCollectors.js";
+} from "../services/disruptions/collectors.js";
 import {
   DISRUPTION_DURATION_MULTIPLIER,
   calculateCostUsd,

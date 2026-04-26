@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { z } from "zod";
 import { ApiError } from "../middleware/error.js";
-import { getScenarioById, updateScenario } from "../services/firestore.js";
-import { generateReasoning } from "../services/gemini.js";
+import { getScenarioById, updateScenario } from "../services/db/firestore.js";
+import { generateReasoning } from "../services/ai/gemini.js";
 
 const router = Router();
 
