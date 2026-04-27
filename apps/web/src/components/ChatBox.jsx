@@ -107,9 +107,8 @@ export default function ChatBox({ messages, onSend, isLoading, isDisabled }) {
 
       <div className="chat-messages" data-testid="chat-messages">
         {messages.length === 0 ? (
-          <div className="empty-label">
-            <span className="lucide" data-lucide="message-circle" style={{ width: 20, height: 20, marginBottom: "6px", display: "block", margin: "0 auto 6px", color: "var(--text-muted)" }} />
-            Ask about delays, risk, or dispatch timing.
+          <div className="chat-empty-inline" data-testid="chat-empty-inline">
+            No conversation yet.
           </div>
         ) : (
           messages.map((message, index) => (
@@ -154,6 +153,10 @@ export default function ChatBox({ messages, onSend, isLoading, isDisabled }) {
           <span className="lucide" data-lucide="send" style={{ width: 16, height: 16 }} />
         </button>
       </form>
+
+      <div className="chat-helper-inline" data-testid="chat-helper-inline">
+        Ask Supply Chain AI about delays, risk, or dispatch timing.
+      </div>
     </section>
   );
 }

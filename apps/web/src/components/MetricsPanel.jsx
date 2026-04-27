@@ -51,24 +51,6 @@ function formatDelta(current, baseline, suffix = "") {
   return `${sign}${absolute.toFixed(1)}${suffix}`;
 }
 
-function MetricCard({ title, value, baseline, delta, testId, suffix = "", icon, iconColor = "teal" }) {
-  const deltaClass = delta ? (delta.startsWith("+") ? "negative" : "positive") : "";
-
-  return (
-    <div className="metric-card metric-stat-card" data-testid={testId}>
-      <div className={`metric-icon ${iconColor}`}>
-        <span className="lucide" data-lucide={icon} style={{ width: 16, height: 16 }} />
-      </div>
-      <div className="metric-title">{title}</div>
-      <div className="metric-value mono metric-value-animated">
-        {value}{suffix}
-      </div>
-      {baseline ? <div className="metric-baseline">was {baseline}{suffix}</div> : null}
-      {delta ? <div className={`metric-delta ${deltaClass}`}>{delta}</div> : null}
-    </div>
-  );
-}
-
 function calculateDurationSeconds(distanceM, speedKmh) {
   if (!Number.isFinite(distanceM) || !Number.isFinite(speedKmh) || speedKmh <= 0) {
     return NaN;
@@ -80,27 +62,46 @@ function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
 
-function SpeedGauge({ speedKmh, min = 20, max = 120 }) {
-  const radius = 52;
-  const circumference = 2 * Math.PI * radius;
-  const normalized = clamp((speedKmh - min) / (max - min), 0, 1);
-  const strokeLength = normalized * circumference;
+function MetricCard({ title, value, baseline, delta, testId, suffix = "", icon, iconColor = "teal" }) {
+  const deltaClass = delta ? (delta.startsWith("+") ? "negative" : "positive") : "";
 
   return (
-    <div className="speed-gauge" data-testid="dynamic-speed-gauge">
-      <svg viewBox="0 0 140 140" className="speed-gauge-svg">
-        <circle className="speed-gauge-track" cx="70" cy="70" r={radius} />
-        <circle
-          className="speed-gauge-progress"
-          cx="70"
-          cy="70"
-          r={radius}
-          strokeDasharray={`${strokeLength} ${circumference}`}
+    <div className="metric-card metric-stat-card" data-testid={testId}>
+      <div className={`metric-icon ${iconColor}`}>
+        <span className="lucide" data-lucide={icon} style={{ width: 16, height: 16 }} />
+      </div>
+      <div className="metric-title">{title}</div>
+      <div className="metric-value mono metric-value-animated">
+        {value}
+        {suffix}
+      </div>
+      {baseline ? <div className="metric-baseline">was {baseline}{suffix}</div> : null}
+      {delta ? <div className={`metric-delta ${deltaClass}`}>{delta}</div> : null}
+    </div>
+  );
+}
+
+function HalfSpeedGauge({ speedKmh, min = 20, max = 120 }) {
+  const normalized = clamp((speedKmh - min) / (max - min), 0, 1);
+
+  return (
+    <div className="half-speed-gauge" data-testid="dynamic-speed-gauge">
+      <svg viewBox="0 0 180 98" className="half-speed-gauge-svg">
+        <path
+          className="half-gauge-track"
+          d="M 20 82 A 70 70 0 0 1 160 82"
+          pathLength="100"
+        />
+        <path
+          className="half-gauge-progress"
+          d="M 20 82 A 70 70 0 0 1 160 82"
+          pathLength="100"
+          strokeDasharray={`${Math.max(2, normalized * 100)} 100`}
         />
       </svg>
-      <div className="speed-gauge-center">
-        <div className="speed-gauge-value mono">{speedKmh}</div>
-        <div className="speed-gauge-unit">km/h</div>
+      <div className="half-gauge-center">
+        <span className="lucide" data-lucide="gauge" style={{ width: 18, height: 18 }} />
+        <div className="half-gauge-value mono">{speedKmh}</div>
       </div>
     </div>
   );
@@ -125,6 +126,14 @@ export default function MetricsPanel({
   const disruptionLabel = activeDisruption?.type
     ? activeDisruption.type.replace(/_/g, " ")
     : "none";
+  const riskScore = Number(currentMetrics?.risk_score);
+  const riskPosture = Number.isFinite(riskScore)
+    ? riskScore >= 80
+      ? "High risk posture"
+      : riskScore >= 55
+        ? "Elevated risk posture"
+        : "Stable risk posture"
+    : "Risk posture unavailable";
 
   return (
     <section className="metrics-panel" data-testid="metrics-panel">
@@ -140,10 +149,14 @@ export default function MetricsPanel({
         <MetricCard
           title="Distance"
           value={formatDistance(currentMetrics?.distance_m)}
-          baseline={hasReroute ? formatDistance(baselineMetrics.distance_m) : null}
+          baseline={hasReroute ? formatDistance(baselineMetrics?.distance_m) : null}
           delta={
             hasReroute
-              ? formatDelta(currentMetrics.distance_m / 1000, baselineMetrics.distance_m / 1000, " km")
+              ? formatDelta(
+                  currentMetrics?.distance_m / 1000,
+                  baselineMetrics?.distance_m / 1000,
+                  " km"
+                )
               : null
           }
           suffix=" km"
@@ -156,7 +169,11 @@ export default function MetricsPanel({
           title="Duration"
           value={formatDuration(currentMetrics?.duration_s)}
           baseline={hasReroute ? formatDuration(baselineMetrics?.duration_s) : null}
-          delta={hasReroute ? formatDurationDelta(currentMetrics?.duration_s, baselineMetrics?.duration_s) : null}
+          delta={
+            hasReroute
+              ? formatDurationDelta(currentMetrics?.duration_s, baselineMetrics?.duration_s)
+              : null
+          }
           icon="clock"
           iconColor="amber"
           testId="metric-time-card"
@@ -165,7 +182,11 @@ export default function MetricsPanel({
         <MetricCard
           title="Risk Score"
           value={Number.isFinite(currentMetrics?.risk_score) ? String(currentMetrics.risk_score) : "—"}
-          baseline={hasReroute && Number.isFinite(baselineMetrics?.risk_score) ? String(baselineMetrics.risk_score) : null}
+          baseline={
+            hasReroute && Number.isFinite(baselineMetrics?.risk_score)
+              ? String(baselineMetrics.risk_score)
+              : null
+          }
           delta={riskDelta}
           suffix="/100"
           icon="shield-alert"
@@ -174,30 +195,35 @@ export default function MetricsPanel({
         />
       </div>
 
-      <div className="metric-card speed-gauge-card" data-testid="metric-speed-card">
-        <div className="speed-gauge-layout">
-          <SpeedGauge speedKmh={vehicleSpeed} />
-          <div className="speed-gauge-copy">
-            <div className="metric-title">Dynamic Speed Gauge</div>
-            <div className="metric-value mono metric-value-animated">{vehicleSpeed} km/h</div>
-            <div className="metric-baseline">
+      <div className="metric-card speed-meter-card" data-testid="metric-speed-card">
+        <div className="speed-meter-split">
+          <div className="speed-meter-left">
+            <HalfSpeedGauge speedKmh={vehicleSpeed} />
+            <input
+              type="range"
+              min="20"
+              max="120"
+              step="5"
+              value={vehicleSpeed ?? 80}
+              onInput={(event) => onVehicleSpeedChange(Number(event.currentTarget.value))}
+              className="speed-slider"
+              data-testid="speed-slider"
+            />
+          </div>
+
+          <div className="speed-meter-right">
+            <div className="metric-title">Dynamic speed profile</div>
+            <div className="speed-readout mono">{vehicleSpeed} km/h</div>
+            <div className="speed-support-text">
               Projected ETA: {formatDuration(projectedDurationS)}
-              {hasReroute ? ` (${formatDurationDelta(projectedDurationS, baselineProjectedDurationS) || "n/a"})` : ""}
+              {hasReroute
+                ? ` (${formatDurationDelta(projectedDurationS, baselineProjectedDurationS) || "n/a"})`
+                : ""}
             </div>
+            <div className="speed-support-text">{riskPosture}</div>
           </div>
         </div>
-        <input
-          type="range"
-          min="20"
-          max="120"
-          step="5"
-          value={vehicleSpeed ?? 80}
-          onInput={(event) => onVehicleSpeedChange(Number(event.currentTarget.value))}
-          className="speed-slider"
-          data-testid="speed-slider"
-        />
       </div>
     </section>
   );
 }
-

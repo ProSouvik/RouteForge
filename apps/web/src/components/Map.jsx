@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "preact/hooks";
+import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -84,6 +84,73 @@ function findIncidentForLocation(incidents, location, index) {
   );
 }
 
+function buildDisruptionEntries({
+  activeDisruption,
+  selectedLiveDisruptions,
+  playbackStep,
+  estimatedDelayMinutes,
+}) {
+  const fromActive = playbackStep >= 1 && activeDisruption?.locations?.length
+    ? activeDisruption.locations
+        .map((location, index) => {
+          const incident = findIncidentForLocation(activeDisruption.incidents, location, index);
+          if (!Number.isFinite(location?.lat) || !Number.isFinite(location?.lon)) {
+            return null;
+          }
+
+          return {
+            id: incident?.id || `active-disruption-${index}`,
+            index,
+            location,
+            incident,
+          };
+        })
+        .filter(Boolean)
+    : [];
+
+  const fromSelected = fromActive.length === 0
+    ? (selectedLiveDisruptions || [])
+        .map((incident, index) => {
+          const lat = Number(incident?.location?.lat ?? incident?.lat);
+          const lon = Number(incident?.location?.lon ?? incident?.lon);
+          if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+            return null;
+          }
+
+          return {
+            id: incident.id || `selected-disruption-${index}`,
+            index,
+            location: { lat, lon },
+            incident,
+          };
+        })
+        .filter(Boolean)
+    : [];
+
+  const disruptionEntries = fromActive.length > 0 ? fromActive : fromSelected;
+  const distributedDelay = disruptionEntries.length > 0
+    ? Math.max(1, Math.round((estimatedDelayMinutes || 0) / disruptionEntries.length))
+    : 0;
+
+  return disruptionEntries.map((entry, index) => {
+    const typeLabel = formatDisruptionType(entry.incident, activeDisruption?.type);
+    const locationName =
+      entry.incident?.location_name ||
+      entry.incident?.locationName ||
+      entry.incident?.name ||
+      `Route segment ${index + 1}`;
+    const cause = entry.incident?.description || "Live disruption detected near the route corridor.";
+
+    return {
+      ...entry,
+      typeLabel,
+      locationName,
+      cause,
+      delayMinutes: distributedDelay,
+    };
+  });
+}
+
 export default function Map({
   source,
   destination,
@@ -103,6 +170,45 @@ export default function Map({
   const clickIndicatorRef = useRef(null);
   const onMapClickRef = useRef(onMapClick);
   const selectionModeRef = useRef(selectionMode);
+  const [isDisruptionTrayOpen, setIsDisruptionTrayOpen] = useState(false);
+  const [activeDisruptionTab, setActiveDisruptionTab] = useState(0);
+
+  const disruptionEntries = useMemo(
+    () =>
+      buildDisruptionEntries({
+        activeDisruption,
+        selectedLiveDisruptions,
+        playbackStep,
+        estimatedDelayMinutes,
+      }),
+    [activeDisruption, selectedLiveDisruptions, playbackStep, estimatedDelayMinutes]
+  );
+
+  useEffect(() => {
+    if (disruptionEntries.length === 0) {
+      setIsDisruptionTrayOpen(false);
+      setActiveDisruptionTab(0);
+      return;
+    }
+
+    setIsDisruptionTrayOpen(true);
+    if (activeDisruptionTab >= disruptionEntries.length) {
+      setActiveDisruptionTab(0);
+    }
+  }, [disruptionEntries.length, activeDisruptionTab]);
+
+  function handleFocusDisruption(index) {
+    setActiveDisruptionTab(index);
+
+    const target = disruptionEntries[index];
+    if (target?.location && mapRef.current) {
+      mapRef.current.flyTo(
+        [target.location.lat, target.location.lon],
+        Math.max(mapRef.current.getZoom(), 7),
+        { duration: 0.6 }
+      );
+    }
+  }
 
   useEffect(() => {
     onMapClickRef.current = onMapClick;
@@ -120,11 +226,11 @@ export default function Map({
     const map = L.map(containerRef.current, {
       zoomControl: true,
       worldCopyJump: true,
+      attributionControl: false,
     }).setView([20, 0], 2);
 
     L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
       maxZoom: 19,
-      //attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
       crossOrigin: true,
       subdomains: "abcd",
     }).addTo(map);
@@ -234,35 +340,7 @@ export default function Map({
       boundsPoints.push(...rerouteLine);
     }
 
-    const activeLocations = playbackStep >= 1 && activeDisruption?.locations
-      ? activeDisruption.locations.map((location, index) => {
-          const incident = findIncidentForLocation(activeDisruption.incidents, location, index);
-          return { location, incident };
-        })
-      : [];
-
-    const selectedLocations = activeLocations.length === 0
-      ? (selectedLiveDisruptions || [])
-          .map((incident) => {
-            const lat = Number(incident?.location?.lat ?? incident?.lat);
-            const lon = Number(incident?.location?.lon ?? incident?.lon);
-            if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
-              return null;
-            }
-            return {
-              location: { lat, lon },
-              incident,
-            };
-          })
-          .filter(Boolean)
-      : [];
-
-    const disruptionPoints = activeLocations.length > 0 ? activeLocations : selectedLocations;
-    const distributedDelay = disruptionPoints.length > 0
-      ? Math.max(1, Math.round((estimatedDelayMinutes || 0) / disruptionPoints.length))
-      : 0;
-
-    disruptionPoints.forEach((entry, index) => {
+    disruptionEntries.forEach((entry, index) => {
       const disruptionPoint = [entry.location.lat, entry.location.lon];
       boundsPoints.push(disruptionPoint);
 
@@ -271,7 +349,7 @@ export default function Map({
         buildTooltipMarkup({
           incident: entry.incident,
           index,
-          delayMinutes: distributedDelay,
+          delayMinutes: entry.delayMinutes,
           fallbackType: activeDisruption?.type,
         }),
         {
@@ -297,13 +375,18 @@ export default function Map({
     playbackStep,
     selectedLiveDisruptions,
     estimatedDelayMinutes,
+    disruptionEntries,
   ]);
 
   const disruptionLabel = activeDisruption?.type
     ? activeDisruption.type === "multiple_disruptions"
       ? `${activeDisruption.locations.length} disruptions`
       : activeDisruption.type.replace(/_/g, " ")
-    : "no active disruption";
+    : disruptionEntries.length > 0
+      ? `${disruptionEntries.length} selected disruptions`
+      : "no active disruption";
+
+  const activeDisruptionEntry = disruptionEntries[activeDisruptionTab] || null;
 
   const selectionHint = selectionMode
     ? `Click the map to choose ${selectionMode}`
@@ -320,6 +403,46 @@ export default function Map({
         </span>
         <div className="banner-hint">{selectionHint}</div>
       </div>
+
+      {disruptionEntries.length > 0 ? (
+        <div className="disruption-info-tray" data-testid="active-disruption-tray">
+          <button
+            type="button"
+            className="disruption-tray-toggle"
+            onClick={() => setIsDisruptionTrayOpen((current) => !current)}
+            data-testid="active-disruption-tray-toggle"
+          >
+            {disruptionEntries.length} active disruption{disruptionEntries.length === 1 ? "" : "s"}
+            <span className={`disruption-tray-caret ${isDisruptionTrayOpen ? "open" : ""}`}>▾</span>
+          </button>
+
+          {isDisruptionTrayOpen ? (
+            <div className="disruption-tray-dropdown" data-testid="active-disruption-dropdown">
+              <div className="disruption-tray-tabs" data-testid="active-disruption-tabs">
+                {disruptionEntries.map((entry, index) => (
+                  <button
+                    type="button"
+                    key={entry.id}
+                    className={`disruption-tab-pill ${activeDisruptionTab === index ? "active" : ""}`}
+                    onClick={() => handleFocusDisruption(index)}
+                    data-testid={`active-disruption-tab-${entry.id}`}
+                  >
+                    {entry.typeLabel}
+                  </button>
+                ))}
+              </div>
+
+              {activeDisruptionEntry ? (
+                <div className="disruption-tray-details" data-testid="active-disruption-details">
+                  <div className="tray-location">{activeDisruptionEntry.locationName}</div>
+                  <div className="tray-cause">{activeDisruptionEntry.cause}</div>
+                  <div className="tray-delay">Estimated delay +{activeDisruptionEntry.delayMinutes} min</div>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="floating-legend" data-testid="map-legend">
         <div className="legend-item">

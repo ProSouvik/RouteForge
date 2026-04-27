@@ -69,6 +69,74 @@ function buildScenarioLabel(routeSetup) {
   return `${sourceName} → ${destinationName}`;
 }
 
+function formatSummaryDistance(distanceM) {
+  if (!Number.isFinite(distanceM)) {
+    return "— km";
+  }
+  return `${(distanceM / 1000).toFixed(1)} km`;
+}
+
+function formatSummaryDuration(durationS) {
+  if (!Number.isFinite(durationS)) {
+    return "—";
+  }
+
+  const totalMinutes = Math.round(durationS / 60);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  if (hours <= 0) {
+    return `${minutes}m`;
+  }
+
+  if (minutes <= 0) {
+    return `${hours}h`;
+  }
+
+  return `${hours}h ${minutes}m`;
+}
+
+function buildReasoningDisplay({
+  reasoningText,
+  laneLabel,
+  baselineMetrics,
+  rerouteMetrics,
+  activeDisruption,
+}) {
+  const baseText = (reasoningText || "").trim() || "Route analysis is available.";
+  if (baseText.length >= 120) {
+    return baseText;
+  }
+
+  const currentMetrics = rerouteMetrics || baselineMetrics;
+  const additions = [];
+
+  if (laneLabel) {
+    additions.push(`Scenario ${laneLabel}.`);
+  }
+
+  if (currentMetrics) {
+    additions.push(
+      `Current route is ${formatSummaryDistance(currentMetrics.distance_m)} in about ${formatSummaryDuration(currentMetrics.duration_s)}.`
+    );
+  }
+
+  if (baselineMetrics && rerouteMetrics) {
+    const deltaMinutes = Math.round((rerouteMetrics.duration_s - baselineMetrics.duration_s) / 60);
+    const deltaLabel = deltaMinutes >= 0 ? `+${deltaMinutes}` : `${deltaMinutes}`;
+    additions.push(`Change from baseline is ${deltaLabel} min.`);
+  }
+
+  const disruptionCount = activeDisruption?.locations?.length || 0;
+  if (disruptionCount > 0) {
+    additions.push(
+      `${disruptionCount} active disruption${disruptionCount === 1 ? "" : "s"} currently tracked.`
+    );
+  }
+
+  return `${baseText} ${additions.join(" ")}`.trim();
+}
+
 function clearRoutingForDraft(current, nextRouteSetup) {
   return {
     ...current,
@@ -689,6 +757,16 @@ export default function App() {
       safeParsePoint(appState.routeSetup.destinationPoint)
   );
   const laneLabel = appState.scenario.label || buildScenarioLabel(appState.routeSetup);
+  const reasoningDisplay = buildReasoningDisplay({
+    reasoningText: appState.reasoning.text,
+    laneLabel,
+    baselineMetrics: appState.routes.baselineMetrics,
+    rerouteMetrics: appState.routes.rerouteMetrics,
+    activeDisruption: appState.routes.activeDisruption,
+  });
+  const activeDisruptionCount = appState.routes.activeDisruption?.locations?.length || 0;
+  const selectedDisruptionCount = appState.routes.selectedLiveDisruptions.length;
+  const playbackDisruptionCount = activeDisruptionCount || selectedDisruptionCount;
   const estimatedDelayMinutes =
     Number.isFinite(appState.routes.rerouteMetrics?.duration_s) &&
     Number.isFinite(appState.routes.baselineMetrics?.duration_s)
@@ -743,15 +821,19 @@ export default function App() {
         </div>
       ) : null}
       <header className="topbar" data-testid="topbar">
-        <div className="brand">
-          <div className="brand-icon">RF</div>
+        <div className="topbar-left">
+          <span className={`status-dot ${appState.scenario.id ? "" : "offline"}`} />
+          <span className="topbar-status-label">
+            {appState.scenario.id ? "Scenario active" : "No scenario"}
+          </span>
+        </div>
+
+        <div className="brand topbar-brand-center">
           RouteForge
         </div>
-        <div className="topbar-meta">
-          <span className={`status-dot ${appState.scenario.id ? "" : "offline"}`} />
-          {appState.scenario.id ? "Scenario active" : "No scenario"}
-          <span style={{ color: "var(--border-default)" }}>|</span>
-          DarthVaders
+
+        <div className="topbar-right">
+          <span className="topbar-pill subtle">Resilience mode</span>
         </div>
       </header>
 
@@ -814,7 +896,7 @@ export default function App() {
 
             <div className="right-split-bottom" data-testid="right-split-bottom">
               <ReasoningCard
-                reasoning={appState.reasoning.text}
+                reasoning={reasoningDisplay}
                 onRefresh={handleRefreshReasoning}
                 canRefresh={!!appState.scenario.id}
                 isRefreshing={appState.loading.reasoning}
@@ -859,6 +941,9 @@ export default function App() {
           onStepChange={handleStepChange}
           isPlaying={appState.playback.isPlaying}
           onTogglePlay={handleTogglePlay}
+          scenarioLabel={laneLabel}
+          disruptionCount={playbackDisruptionCount}
+          estimatedDelayMinutes={estimatedDelayMinutes}
         />
       </footer>
     </div>

@@ -1,93 +1,15 @@
-import { useEffect, useRef, useState } from "preact/hooks";
+import { useEffect, useState } from "preact/hooks";
 
 export default function ReasoningCard({ reasoning, onRefresh, canRefresh, isRefreshing }) {
-  const [msg, setMsg] = useState("");
-  const [visible, setVisible] = useState(false);
-  const [closing, setClosing] = useState(false);
-  const [pos, setPos] = useState({ left: null, top: null });
-  const [size, setSize] = useState({ width: null, height: null });
-  const panelRef = useRef(null);
+  const summary =
+    reasoning ||
+    "Compute a route and select disruptions to generate a scenario-aware operational summary.";
+  const isLongSummary = summary.length > 140;
+  const [isExpanded, setIsExpanded] = useState(false);
 
   useEffect(() => {
-    if (!reasoning) return undefined;
-    // Do not show the floating window for the initial placeholder prompt
-    const DEFAULT_PROMPT = "Compute a route to begin.";
-    if (reasoning.trim() === DEFAULT_PROMPT) {
-      setMsg("");
-      setClosing(false);
-      setVisible(false);
-      return undefined;
-    }
-    // show floating window with neon border
-    setMsg(reasoning);
-    setClosing(false);
-    setVisible(true);
-
-    // auto-trigger close after 15s with fade
-    const fadeDelay = 15000;
-    const fadeDuration = 420; // matches CSS transition
-    const t1 = setTimeout(() => setClosing(true), fadeDelay);
-    const t2 = setTimeout(() => setVisible(false), fadeDelay + fadeDuration);
-
-    // When first shown, center it and set default size if not set
-    if (panelRef.current && size.width == null) {
-      const rect = panelRef.current.getBoundingClientRect();
-      const w = Math.min(window.innerWidth * 0.6, 640);
-      const h = Math.max(120, rect.height);
-      setSize({ width: Math.round(w), height: Math.round(h) });
-      setPos({ left: Math.round((window.innerWidth - w) / 2), top: Math.round((window.innerHeight - h) / 2) });
-    }
-
-    return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-    };
-  }, [reasoning]);
-
-  // Drag handling
-  function onHeaderPointerDown(e) {
-    if (!panelRef.current) return;
-    e.preventDefault();
-    const startX = e.clientX;
-    const startY = e.clientY;
-    const rect = panelRef.current.getBoundingClientRect();
-    const offsetX = startX - rect.left;
-    const offsetY = startY - rect.top;
-
-    function onMove(ev) {
-      const nx = ev.clientX - offsetX;
-      const ny = ev.clientY - offsetY;
-      const w = panelRef.current.offsetWidth;
-      const h = panelRef.current.offsetHeight;
-      const clampedX = Math.max(8, Math.min(nx, window.innerWidth - w - 8));
-      const clampedY = Math.max(8, Math.min(ny, window.innerHeight - h - 8));
-      setPos({ left: clampedX, top: clampedY });
-    }
-
-    function onUp() {
-      document.removeEventListener('pointermove', onMove);
-      document.removeEventListener('pointerup', onUp);
-    }
-
-    document.addEventListener('pointermove', onMove);
-    document.addEventListener('pointerup', onUp);
-  }
-
-  // update size after user resizes (reads DOM on pointerup)
-  useEffect(() => {
-    function onPointerUp() {
-      if (!panelRef.current) return;
-      const r = panelRef.current.getBoundingClientRect();
-      setSize({ width: Math.round(r.width), height: Math.round(r.height) });
-    }
-    document.addEventListener('pointerup', onPointerUp);
-    return () => document.removeEventListener('pointerup', onPointerUp);
-  }, []);
-
-  function closeWindow() {
-    setClosing(true);
-    setTimeout(() => setVisible(false), 420);
-  }
+    setIsExpanded(false);
+  }, [summary]);
 
   return (
     <section className="reasoning-card" data-testid="reasoning-card">
@@ -122,9 +44,19 @@ export default function ReasoningCard({ reasoning, onRefresh, canRefresh, isRefr
           {isRefreshing ? "Refreshing..." : "Refresh reasoning"}
         </button>
       </div>
-      <p className="reasoning-copy">
-        {reasoning || "Compute a route and select disruptions to generate a scenario-aware operational summary."}
+      <p className={`reasoning-copy ${isExpanded ? "expanded" : "collapsed"}`}>
+        {summary}
       </p>
+      {isLongSummary ? (
+        <button
+          type="button"
+          className="reasoning-expand-button"
+          onClick={() => setIsExpanded((current) => !current)}
+          data-testid="reasoning-expand-button"
+        >
+          {isExpanded ? "Show less" : "...click to view more"}
+        </button>
+      ) : null}
     </section>
   );
 }
